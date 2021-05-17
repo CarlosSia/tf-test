@@ -2,8 +2,11 @@ package com.tecforte.blog.service;
 
 import com.tecforte.blog.domain.Blog;
 import com.tecforte.blog.repository.BlogRepository;
+import com.tecforte.blog.repository.EntryRepository;
 import com.tecforte.blog.service.dto.BlogDTO;
 import com.tecforte.blog.service.mapper.BlogMapper;
+import com.tecforte.blog.service.util.StringMatchingUtil;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,8 +30,11 @@ public class BlogService {
     private final BlogRepository blogRepository;
 
     private final BlogMapper blogMapper;
+    
+    private final EntryRepository entryRepository;
 
-    public BlogService(BlogRepository blogRepository, BlogMapper blogMapper) {
+    public BlogService(BlogRepository blogRepository, BlogMapper blogMapper, EntryRepository entryRepository) {
+        this.entryRepository = entryRepository;
         this.blogRepository = blogRepository;
         this.blogMapper = blogMapper;
     }
@@ -81,5 +87,33 @@ public class BlogService {
     public void delete(Long id) {
         log.debug("Request to delete Blog : {}", id);
         blogRepository.deleteById(id);
+    }
+
+    /**
+     * Clean all entries of all blogs that contain the keywords.
+     *
+     * @param keywords the keywords of entry that will be find and clean.
+     */
+    public void cleanAllBlogs(List<String> keywords) {
+        log.debug("Request to clean all Blog with keywords {}", keywords);
+        blogRepository.findAll().forEach((blog) -> {
+        	cleanBlog(blog.getId(), keywords);
+        });
+    }
+    
+
+    /**
+     * Clean all entries of all blogs that contain the keywords.
+     *
+     * @param keywords the keywords of entry that will be find and clean.
+     */
+    public void cleanBlog(Long id, List<String> keywords) {
+        log.debug("Request to clean Blog with id : {} with keywords {}", id, keywords);
+        entryRepository.findAllByBlogId(id).forEach((entry) -> {
+        	if(StringMatchingUtil.containKeyword(keywords, entry.getContent()) || StringMatchingUtil.containKeyword(keywords, entry.getTitle())) {
+        		log.debug("Request to delete Entry : {}", entry.getId());
+                entryRepository.deleteById(entry.getId());
+        	}
+        });;
     }
 }

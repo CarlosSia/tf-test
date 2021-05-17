@@ -1,5 +1,8 @@
 package com.tecforte.blog.repository;
 import com.tecforte.blog.domain.Entry;
+
+import java.util.List;
+
 import org.springframework.data.jpa.repository.*;
 import org.springframework.stereotype.Repository;
 
@@ -10,5 +13,5 @@ import org.springframework.stereotype.Repository;
 @SuppressWarnings("unused")
 @Repository
 public interface EntryRepository extends JpaRepository<Entry, Long> {
-
+	List<Entry> findAllByBlogId(Long blogId);
 }

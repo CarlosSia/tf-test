@@ -1,9 +1,14 @@
 package com.tecforte.blog.service;
 
+import com.tecforte.blog.domain.Blog;
 import com.tecforte.blog.domain.Entry;
+import com.tecforte.blog.domain.enumeration.Emoji;
 import com.tecforte.blog.repository.EntryRepository;
+import com.tecforte.blog.repository.BlogRepository;
 import com.tecforte.blog.service.dto.EntryDTO;
 import com.tecforte.blog.service.mapper.EntryMapper;
+import com.tecforte.blog.service.util.ValidationUtil;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,10 +31,13 @@ public class EntryService {
     private final EntryRepository entryRepository;
 
     private final EntryMapper entryMapper;
+    
+    private final BlogRepository blogRepository;
 
-    public EntryService(EntryRepository entryRepository, EntryMapper entryMapper) {
+    public EntryService(EntryRepository entryRepository, EntryMapper entryMapper, BlogRepository blogRepository) {
         this.entryRepository = entryRepository;
         this.entryMapper = entryMapper;
+        this.blogRepository = blogRepository;
     }
 
     /**
@@ -80,5 +88,34 @@ public class EntryService {
     public void delete(Long id) {
         log.debug("Request to delete Entry : {}", id);
         entryRepository.deleteById(id);
+    }
+    
+    /**
+     * 
+     * @param entryDTO
+     * @return number indicate the entry violate the rule or not
+     * if number 0 is returned the entry does not violate any rule
+     * if number 1 is returned cant find the blog with the id
+     * if number 2 is returned the entry violates emoji rule
+     * if number 3 is returned the entry violates content rule
+     * if number 4 is returned the entry violates title rule
+     */
+    public int validateEntry(EntryDTO entryDTO) {
+        if(null != entryDTO.getBlogId()) {
+        	Optional<Blog> blog = blogRepository.findById(entryDTO.getBlogId());
+        	if(!blog.isPresent()) {
+        		return 1;
+        	}
+            if(ValidationUtil.validateEmoji(blog.get().isPositive(), entryDTO.getEmoji()) == false) {
+            	return 2;
+            }
+            if(ValidationUtil.validateContentOrTitle(blog.get().isPositive(), entryDTO.getContent()) == false) {
+            	return 3;
+            }
+            if(ValidationUtil.validateContentOrTitle(blog.get().isPositive(), entryDTO.getTitle()) == false) {
+            	return 4;
+            }
+        }
+        return 0;
     }
 }

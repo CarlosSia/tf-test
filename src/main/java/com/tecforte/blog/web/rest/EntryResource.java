@@ -58,6 +58,15 @@ public class EntryResource {
         if (entryDTO.getId() != null) {
             throw new BadRequestAlertException("A new entry cannot already have an ID", ENTITY_NAME, "idexists");
         }
+        int validationResult = entryService.validateEntry(entryDTO);
+        if(validationResult != 0) {
+    		switch(validationResult) {
+    			case 1: throw new BadRequestAlertException("Blog Not Found", ENTITY_NAME, "blogNotFound");
+    			case 2: throw new BadRequestAlertException("Invalid Emoji", ENTITY_NAME, "invalidEmoji");
+    			case 3: throw new BadRequestAlertException("Invalid Content", ENTITY_NAME, "invalidContent");
+    			case 4: throw new BadRequestAlertException("Invalid Title", ENTITY_NAME, "invalidTitle");
+    		}
+    	}
         EntryDTO result = entryService.save(entryDTO);
         return ResponseEntity.created(new URI("/api/entries/" + result.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, false, ENTITY_NAME, result.getId().toString()))

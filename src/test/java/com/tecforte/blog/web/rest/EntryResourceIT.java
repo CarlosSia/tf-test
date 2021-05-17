@@ -1,7 +1,9 @@
 package com.tecforte.blog.web.rest;
 
 import com.tecforte.blog.BlogApp;
+import com.tecforte.blog.domain.Blog;
 import com.tecforte.blog.domain.Entry;
+import com.tecforte.blog.repository.BlogRepository;
 import com.tecforte.blog.repository.EntryRepository;
 import com.tecforte.blog.service.EntryService;
 import com.tecforte.blog.service.dto.EntryDTO;
@@ -43,9 +45,11 @@ public class EntryResourceIT {
 
     private static final Emoji DEFAULT_EMOJI = Emoji.LIKE;
     private static final Emoji UPDATED_EMOJI = Emoji.HAHA;
+    private static final Emoji SAD_EMOJI = Emoji.SAD;
 
     private static final String DEFAULT_CONTENT = "AAAAAAAAAA";
     private static final String UPDATED_CONTENT = "BBBBBBBBBB";
+    private static final String SAD_CONTENT = "SAD";
 
     @Autowired
     private EntryRepository entryRepository;
@@ -55,6 +59,9 @@ public class EntryResourceIT {
 
     @Autowired
     private EntryService entryService;
+
+    @Autowired
+    private BlogRepository blogRepository;
 
     @Autowired
     private MappingJackson2HttpMessageConverter jacksonMessageConverter;
@@ -74,6 +81,8 @@ public class EntryResourceIT {
     private MockMvc restEntryMockMvc;
 
     private Entry entry;
+    
+    private Blog blog;
 
     @BeforeEach
     public void setup() {
@@ -123,9 +132,15 @@ public class EntryResourceIT {
     @Transactional
     public void createEntry() throws Exception {
         int databaseSizeBeforeCreate = entryRepository.findAll().size();
+        
+        // Create the Blog
+        blog = BlogResourceIT.createUpdatedEntity(em);
+        blogRepository.saveAndFlush(blog);
 
         // Create the Entry
         EntryDTO entryDTO = entryMapper.toDto(entry);
+        entryDTO.setBlogId(blog.getId());
+        entryDTO.setBlogName(blog.getName());
         restEntryMockMvc.perform(post("/api/entries")
             .contentType(TestUtil.APPLICATION_JSON_UTF8)
             .content(TestUtil.convertObjectToJsonBytes(entryDTO)))
@@ -139,15 +154,71 @@ public class EntryResourceIT {
         assertThat(testEntry.getEmoji()).isEqualTo(DEFAULT_EMOJI);
         assertThat(testEntry.getContent()).isEqualTo(DEFAULT_CONTENT);
     }
+    
+
+    @Test
+    @Transactional
+    public void createEntryWithInvalidEmoji() throws Exception {
+        int databaseSizeBeforeCreate = entryRepository.findAll().size();
+        entry.setEmoji(SAD_EMOJI);
+        
+        // Create the Blog
+        blog = BlogResourceIT.createUpdatedEntity(em);
+        blogRepository.saveAndFlush(blog);
+
+        // Create the Entry
+        EntryDTO entryDTO = entryMapper.toDto(entry);
+        entryDTO.setBlogId(blog.getId());
+        entryDTO.setBlogName(blog.getName());
+        restEntryMockMvc.perform(post("/api/entries")
+            .contentType(TestUtil.APPLICATION_JSON_UTF8)
+            .content(TestUtil.convertObjectToJsonBytes(entryDTO)))
+            .andExpect(status().isBadRequest());
+
+        // Validate the Entry in the database
+        List<Entry> entryList = entryRepository.findAll();
+        assertThat(entryList).hasSize(databaseSizeBeforeCreate);
+    }
+    
+
+    @Test
+    @Transactional
+    public void createEntryWithInvalidContent() throws Exception {
+        int databaseSizeBeforeCreate = entryRepository.findAll().size();
+        entry.setContent(SAD_CONTENT);
+        
+        // Create the Blog
+        blog = BlogResourceIT.createUpdatedEntity(em);
+        blogRepository.saveAndFlush(blog);
+
+        // Create the Entry
+        EntryDTO entryDTO = entryMapper.toDto(entry);
+        entryDTO.setBlogId(blog.getId());
+        entryDTO.setBlogName(blog.getName());
+        restEntryMockMvc.perform(post("/api/entries")
+            .contentType(TestUtil.APPLICATION_JSON_UTF8)
+            .content(TestUtil.convertObjectToJsonBytes(entryDTO)))
+            .andExpect(status().isBadRequest());
+
+        // Validate the Entry in the database
+        List<Entry> entryList = entryRepository.findAll();
+        assertThat(entryList).hasSize(databaseSizeBeforeCreate);
+    }
 
     @Test
     @Transactional
     public void createEntryWithExistingId() throws Exception {
         int databaseSizeBeforeCreate = entryRepository.findAll().size();
+        
+        // Create the Blog
+        blog = BlogResourceIT.createUpdatedEntity(em);
+        blogRepository.saveAndFlush(blog);
 
         // Create the Entry with an existing ID
         entry.setId(1L);
         EntryDTO entryDTO = entryMapper.toDto(entry);
+        entryDTO.setBlogId(blog.getId());
+        entryDTO.setBlogName(blog.getName());
 
         // An entity with an existing ID cannot be created, so this API call must fail
         restEntryMockMvc.perform(post("/api/entries")
@@ -165,11 +236,18 @@ public class EntryResourceIT {
     @Transactional
     public void checkTitleIsRequired() throws Exception {
         int databaseSizeBeforeTest = entryRepository.findAll().size();
+        
+        // Create the Blog
+        blog = BlogResourceIT.createUpdatedEntity(em);
+        blogRepository.saveAndFlush(blog);
+        
         // set the field null
         entry.setTitle(null);
 
         // Create the Entry, which fails.
         EntryDTO entryDTO = entryMapper.toDto(entry);
+        entryDTO.setBlogId(blog.getId());
+        entryDTO.setBlogName(blog.getName());
 
         restEntryMockMvc.perform(post("/api/entries")
             .contentType(TestUtil.APPLICATION_JSON_UTF8)
@@ -184,11 +262,18 @@ public class EntryResourceIT {
     @Transactional
     public void checkEmojiIsRequired() throws Exception {
         int databaseSizeBeforeTest = entryRepository.findAll().size();
+        
+        // Create the Blog
+        blog = BlogResourceIT.createUpdatedEntity(em);
+        blogRepository.saveAndFlush(blog);
+        
         // set the field null
         entry.setEmoji(null);
 
         // Create the Entry, which fails.
         EntryDTO entryDTO = entryMapper.toDto(entry);
+        entryDTO.setBlogId(blog.getId());
+        entryDTO.setBlogName(blog.getName());
 
         restEntryMockMvc.perform(post("/api/entries")
             .contentType(TestUtil.APPLICATION_JSON_UTF8)
@@ -242,6 +327,10 @@ public class EntryResourceIT {
     @Test
     @Transactional
     public void updateEntry() throws Exception {
+        // Create the Blog
+        blog = BlogResourceIT.createUpdatedEntity(em);
+        blogRepository.saveAndFlush(blog);
+        
         // Initialize the database
         entryRepository.saveAndFlush(entry);
 
@@ -256,6 +345,8 @@ public class EntryResourceIT {
             .emoji(UPDATED_EMOJI)
             .content(UPDATED_CONTENT);
         EntryDTO entryDTO = entryMapper.toDto(updatedEntry);
+        entryDTO.setBlogId(blog.getId());
+        entryDTO.setBlogName(blog.getName());
 
         restEntryMockMvc.perform(put("/api/entries")
             .contentType(TestUtil.APPLICATION_JSON_UTF8)
@@ -275,9 +366,15 @@ public class EntryResourceIT {
     @Transactional
     public void updateNonExistingEntry() throws Exception {
         int databaseSizeBeforeUpdate = entryRepository.findAll().size();
+        
+        // Create the Blog
+        blog = BlogResourceIT.createUpdatedEntity(em);
+        blogRepository.saveAndFlush(blog);
 
         // Create the Entry
         EntryDTO entryDTO = entryMapper.toDto(entry);
+        entryDTO.setBlogId(blog.getId());
+        entryDTO.setBlogName(blog.getName());
 
         // If the entity doesn't have an ID, it will throw BadRequestAlertException
         restEntryMockMvc.perform(put("/api/entries")

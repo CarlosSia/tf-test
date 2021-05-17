@@ -116,4 +116,33 @@ public class BlogResource {
         blogService.delete(id);
         return ResponseEntity.noContent().headers(HeaderUtil.createEntityDeletionAlert(applicationName, false, ENTITY_NAME, id.toString())).build();
     }
+    
+
+    /**
+     * {@code DELETE  /blogs/clean} : clean all blogs that have entries matches the keywords.
+     *
+     * @param id the id of the blogDTO to delete.
+     * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
+     */
+    @DeleteMapping("/blogs/clean")
+    public ResponseEntity<Void> cleanAllBlogs(@RequestBody List<String> keywords) {
+        log.debug("REST request to clean all Blogs with keywords {}", keywords);
+        blogService.cleanAllBlogs(keywords);
+        return ResponseEntity.noContent().headers(HeaderUtil.createAlert(applicationName, "All Blogs entries that contain the keywords had been cleared", "")).build();
+    }
+    
+
+    /**
+     * {@code DELETE  /blogs/:id/clean} : clean the "id" blogs that have entries matches the keywords.
+     *
+     * @param id the id of the blogDTO to delete.
+     * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
+     */
+    @DeleteMapping("/blogs/{id}/clean")
+    public ResponseEntity<Void> cleanBlog(@PathVariable Long id, @RequestBody List<String> keywords) {
+    	System.out.println(keywords.toString());
+        log.debug("REST request to clean Blog : {} with keywords {}", id, keywords);
+        blogService.cleanBlog(id, keywords);
+        return ResponseEntity.noContent().headers(HeaderUtil.createAlert(applicationName, "All entries of the Blog with identifier " + id +" that contain the keywords had been cleared", id.toString())).build();
+    }
 }
